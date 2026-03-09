@@ -1,0 +1,859 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+/* ═══════════════════════════════════════
+   THEME
+   ═══════════════════════════════════════ */
+const C = {
+  bg: "#050508",
+  bg2: "#0A0A10",
+  card: "#0C0C14",
+  cardHover: "#101020",
+  surface: "#0E0E18",
+  gold: "#C9A243",
+  goldL: "#E8D07A",
+  goldD: "#8E6B1A",
+  goldGlow: "#C9A24318",
+  text: "#EBE9E3",
+  soft: "#8F8FA0",
+  dim: "#55556A",
+  border: "#1A1A2C",
+  borderL: "#24243A",
+  red: "#DC2626",
+  redBg: "#1C0808",
+  green: "#22C55E",
+  greenBg: "#061A0B",
+  amber: "#F59E0B",
+  amberBg: "#1A1000",
+  blue: "#3B82F6",
+  blueBg: "#0A0E1A",
+};
+
+const font = {
+  display: "'Cormorant Garamond', serif",
+  body: "'Outfit', sans-serif",
+  mono: "'JetBrains Mono', monospace",
+};
+
+/* ═══════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════ */
+const navLinks = ["Egzersizler", "Hink Trial", "Programlar", "Ürünler", "Blog"];
+
+const trialStats = [
+  { label: "BPEL Kazanım", value: "+1.32", unit: "cm", sub: "(0.52 inç)", color: C.green },
+  { label: "SFL Kazanım", value: "+1.22", unit: "cm", sub: "(0.48 inç)", color: C.green },
+  { label: "MSEG Kazanım", value: "+0.58", unit: "cm", sub: "(0.23 inç)", color: C.amber },
+  { label: "Süre", value: "6", unit: "ay", sub: "non-invaziv", color: C.blue },
+];
+
+const exercises = [
+  {
+    name: "Manuel Stretching",
+    cat: "Uzunluk",
+    level: "Başlangıç",
+    icon: "↕️",
+    time: "15-20 dk",
+    desc: "Ligamentlere kontrollü gerilim uygulayarak suspenör ligament ve tunica üzerinde plastik deformasyon oluşturur.",
+    tags: ["Uzunluk", "Ligament", "Manuel"],
+    how: "Glans'ı kavrayıp 5 farklı yönde (yukarı, aşağı, sağ, sol, düz) 30-60 sn germe. %50-70 gerilim yeterli.",
+    pi: "İyi: Sabah ereksiyonu artmış, gevşek uzunluk artmış. Kötü: Ağrı, uyuşma, azalmış EQ.",
+  },
+  {
+    name: "Jelqing",
+    cat: "Kalınlık & Uzunluk",
+    level: "Başlangıç",
+    icon: "🔄",
+    time: "10-15 dk",
+    desc: "Yarı-erekt durumda OK-grip ile kan akışını yönlendirerek tunica üzerinde genişleme baskısı yaratır.",
+    tags: ["Kalınlık", "Uzunluk", "Manuel"],
+    how: "OK-grip ile bazdan glansa doğru 2-3 sn süren hareketler. %50-60 ereksiyon seviyesinde, 100-200 rep.",
+    pi: "İyi: Geçici kalınlık artışı (pompa etkisi), sağlıklı renk. Kötü: Peteşi, aşırı şişlik.",
+  },
+  {
+    name: "Vakum Pompa (Girth)",
+    cat: "Kalınlık",
+    level: "Orta",
+    icon: "🔵",
+    time: "15-20 dk",
+    desc: "Hink Trial'da kullanılan ana kalınlık yöntemi. Negatif basınçla tunica genişlemesi ve vasküler remodeling.",
+    tags: ["Kalınlık", "Cihaz", "Pompa"],
+    how: "3-5 inHg basınç, 3×5 dk set, setler arası 1-2 dk masaj. Isınma zorunlu.",
+    pi: "İyi: Donut yok, eşit şişme, normal renk. Kötü: Donut, peteşi, 2+ saat süren ödem.",
+  },
+  {
+    name: "V-Stretch",
+    cat: "Uzunluk",
+    level: "Orta",
+    icon: "✌️",
+    time: "15-20 dk",
+    desc: "Tunica albuginea üzerine diğer elin parmağıyla fulcrum noktası oluşturarak yoğunlaştırılmış gerilim.",
+    tags: ["Uzunluk", "Tunica", "İleri Manuel"],
+    how: "Bir elle stretch, diğer elin parmağı shaft ortasına baskı. Her yönde 30 sn × 3 set.",
+    pi: "İyi: Hissedilir yorgunluk, geçici gevşek uzama. Kötü: Keskin ağrı, uyuşma.",
+  },
+  {
+    name: "Extender / ADS",
+    cat: "Uzunluk",
+    level: "Orta",
+    icon: "📏",
+    time: "2-6 saat/gün",
+    desc: "Düşük gerilimde uzun süreli traksiyon. Hink protokolünde manuel ile kombine edilir. ADS gün boyu giyilir.",
+    tags: ["Uzunluk", "Cihaz", "Traksiyon"],
+    how: "500-1200g arası gerilim. İlk hafta 2 saat, kademeli artış. Her 1 saatte mola.",
+    pi: "İyi: Gevşek uzunluk artışı, sorunsuz cilt. Kötü: Kırmızı lekeler, uyuşma, dolaşım bozukluğu.",
+  },
+  {
+    name: "Kegel & Reverse Kegel",
+    cat: "Performans",
+    level: "Başlangıç",
+    icon: "💪",
+    time: "5-10 dk",
+    desc: "PC kas güçlendirme (Kegel) ve pelvik taban gevşetme (RK). Ereksiyon kalitesi ve kontrol için temel.",
+    tags: ["Performans", "EQ", "Kontrol"],
+    how: "Kegel: 5 sn kasma × 20 rep. RK: 5 sn gevşetme × 20 rep. Günde 2-3 set.",
+    pi: "İyi: Daha sert ereksiyonlar, kontrol artışı. Kötü: Pelvik ağrı (aşırı antrenman).",
+  },
+];
+
+const programs = [
+  {
+    title: "Başlangıç",
+    subtitle: "İlk 90 Gün — Temel Oluşturma",
+    color: C.green,
+    weeks: "12 Hafta",
+    daily: "20-30 dk",
+    days: "5 gün/hafta",
+    steps: [
+      "5 dk ısınma — sıcak kompres veya duşta ısıtma",
+      "Manuel stretch — 5 yön × 30 sn (toplam ~5 dk)",
+      "Jelq — 100 rep, %50-60 ereksiyon",
+      "Kegel — 3 set × 20 rep",
+      "5 dk soğuma — hafif masaj",
+    ],
+    warn: "İlk 2 hafta yarı yoğunlukla başlayın. PI takibi zorunlu.",
+  },
+  {
+    title: "Orta Seviye",
+    subtitle: "90+ Gün Deneyim — Hink Protokolü",
+    color: C.amber,
+    weeks: "16+ Hafta",
+    daily: "30-45 dk",
+    days: "5-6 gün/hafta",
+    steps: [
+      "10 dk ısınma — sıcak kompres + hafif masaj",
+      "Manuel stretch veya V-Stretch — toplam 10 dk",
+      "Pompa — 3×5 dk set, 3-5 inHg",
+      "Kegel + Reverse Kegel — 3 set",
+      "10 dk soğuma — ılık kompres + masaj",
+    ],
+    warn: "Pompa basıncını kademeli artırın. Donut oluşumu = basınç/süre fazla.",
+  },
+  {
+    title: "İleri Program",
+    subtitle: "6+ Ay — Kombine Protokol",
+    color: C.red,
+    weeks: "Devam Eden",
+    daily: "45-60 dk",
+    days: "5-6 gün/hafta",
+    steps: [
+      "Isınma + düşük basınçlı pompa warm-up (5 dk)",
+      "Extender veya hanging — uzunluk bloku",
+      "Pompa — progresif basınç protokolü (4-7 inHg)",
+      "Clamping veya Uli (deneyimliler için)",
+      "Kapsamlı soğuma + citrulline takviyesi",
+      "Deconditioning break planlama (8-12 haftada 1)",
+    ],
+    warn: "Sadece deneyimli kullanıcılar. PI takibi ve düzenli dinlenme zorunlu.",
+  },
+];
+
+const products = [
+  {
+    name: "Bathmate HydroMax",
+    type: "Hidrolik Pompa",
+    rating: 4.6,
+    price: "₺3.500 – ₺5.000",
+    icon: "🔵",
+    why: "Su bazlı eşit basınç dağılımı. Hink Trial'da kullanılan ana cihaz tipi.",
+    best: "Kalınlık odaklı yeni başlayanlar",
+    tag: "En Popüler",
+  },
+  {
+    name: "Leluv Vacuum Pump",
+    type: "Hava Pompa + Gauge",
+    rating: 4.3,
+    price: "₺1.500 – ₺2.500",
+    icon: "🎯",
+    why: "Basınç göstergeli hava pompası. Hassas basınç kontrolü için ideal giriş seviyesi.",
+    best: "Bütçe dostu, basınç takibi isteyenler",
+    tag: "Giriş Seviyesi",
+  },
+  {
+    name: "Quick Extender Pro",
+    type: "Traksiyon Cihazı",
+    rating: 4.4,
+    price: "₺4.000 – ₺7.000",
+    icon: "📏",
+    why: "DSS (Dual Strap Support) sistemiyle konforlu uzun süreli kullanım. Klinik çalışmalarda test edilmiş.",
+    best: "Uzunluk odaklı, gün boyu kullanım",
+    tag: "Uzunluk İçin",
+  },
+  {
+    name: "L-Citrulline (Vigor)",
+    type: "Supplement",
+    rating: 4.5,
+    price: "₺400 – ₺800",
+    icon: "💊",
+    why: "Hink protokolünde önerilen citrulline bazlı takviye. NO üretimini artırarak kan akışını destekler.",
+    best: "EQ ve recovery desteği",
+    tag: "Supplement",
+  },
+];
+
+const blogPosts = [
+  {
+    title: "Hink Trial Sonuçları: Non-İnvaziv PE'nin İlk Bilimsel Kanıtı",
+    cat: "Bilim",
+    time: "12 dk",
+    hot: true,
+    excerpt: "33 katılımcıyla 6 aylık prospektif çalışma — standardize fotoğraf dokümentasyonu ile doğrulanmış sonuçlar.",
+  },
+  {
+    title: "PE'de Fizyolojik İndikatörler (PI): Kapsamlı Rehber",
+    cat: "Güvenlik",
+    time: "10 dk",
+    hot: true,
+    excerpt: "Vücudunuzun sinyallerini okumayı öğrenin. Pozitif ve negatif PI'lar, ne zaman durmalısınız?",
+  },
+  {
+    title: "Pompa Basıncı Bilimi: Kaç inHg, Ne Kadar Süre?",
+    cat: "Rehber",
+    time: "8 dk",
+    hot: false,
+    excerpt: "Bilimsel literatüre dayalı optimal basınç ve set süreleri. Hink kursundan derlenen protokol.",
+  },
+  {
+    title: "Yeni Başlayanlar İçin Ölçüm Rehberi: BPEL, NBPEL, MSEG",
+    cat: "Başlangıç",
+    time: "6 dk",
+    hot: false,
+    excerpt: "Doğru ölçüm tekniği, standart prosedürler ve progress takibi için ipuçları.",
+  },
+];
+
+/* ═══════════════════════════════════════
+   UTILITY COMPONENTS
+   ═══════════════════════════════════════ */
+
+function AnimatedNumber({ end, decimals = 0, prefix = "", suffix = "", color }) {
+  const [val, setVal] = useState(0);
+  const ref = useRef(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && !started.current) {
+          started.current = true;
+          const numEnd = parseFloat(end);
+          let cur = 0;
+          const step = numEnd / 60;
+          const iv = setInterval(() => {
+            cur += step;
+            if (cur >= numEnd) { setVal(numEnd); clearInterval(iv); }
+            else setVal(cur);
+          }, 16);
+        }
+      },
+      { threshold: 0.4 }
+    );
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [end]);
+
+  return (
+    <span ref={ref} style={{ color, fontFamily: font.mono, fontWeight: 700 }}>
+      {prefix}{val.toFixed(decimals)}{suffix}
+    </span>
+  );
+}
+
+function LevelBadge({ level }) {
+  const map = {
+    "Başlangıç": { bg: C.greenBg, c: C.green, border: "#0A3A15" },
+    "Orta": { bg: C.amberBg, c: C.amber, border: "#3A2A00" },
+    "İleri": { bg: C.redBg, c: C.red, border: "#3A1010" },
+  };
+  const s = map[level] || map["Orta"];
+  return (
+    <span style={{
+      background: s.bg, color: s.c, border: `1px solid ${s.border}`,
+      padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+      fontFamily: font.body, letterSpacing: "0.3px",
+    }}>{level}</span>
+  );
+}
+
+function SectionLabel({ text }) {
+  return (
+    <span style={{
+      color: C.gold, fontSize: 11, fontWeight: 600, letterSpacing: "2.5px",
+      textTransform: "uppercase", fontFamily: font.body,
+      display: "flex", alignItems: "center", gap: 10, justifyContent: "center",
+    }}>
+      <span style={{ width: 20, height: 1, background: C.gold + "50" }} />
+      {text}
+      <span style={{ width: 20, height: 1, background: C.gold + "50" }} />
+    </span>
+  );
+}
+
+function SectionTitle({ children }) {
+  return (
+    <h2 style={{
+      fontFamily: font.display, fontSize: "clamp(26px, 4vw, 42px)",
+      fontWeight: 700, marginTop: 12, color: C.text, textAlign: "center", lineHeight: 1.2,
+    }}>{children}</h2>
+  );
+}
+
+/* ═══════════════════════════════════════
+   EXERCISE CARD
+   ═══════════════════════════════════════ */
+function ExerciseCard({ ex, index }) {
+  const [open, setOpen] = useState(false);
+  const [hov, setHov] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        background: hov ? C.cardHover : C.card,
+        border: `1px solid ${hov ? C.gold + "30" : C.border}`,
+        borderRadius: 14, overflow: "hidden",
+        transition: "all 0.35s ease",
+        animation: `fadeUp 0.5s ease ${index * 0.07}s both`,
+      }}
+    >
+      <div style={{ padding: "24px 22px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <span style={{ fontSize: 28 }}>{ex.icon}</span>
+            <div>
+              <div style={{ fontFamily: font.display, fontSize: 18, fontWeight: 700, color: C.text }}>{ex.name}</div>
+              <div style={{ fontFamily: font.body, fontSize: 12, color: C.soft, marginTop: 2 }}>{ex.cat} · {ex.time}</div>
+            </div>
+          </div>
+          <LevelBadge level={ex.level} />
+        </div>
+
+        <p style={{ fontFamily: font.body, fontSize: 13, color: C.soft, lineHeight: 1.65, marginBottom: 14 }}>{ex.desc}</p>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+          {ex.tags.map(t => (
+            <span key={t} style={{
+              background: C.goldGlow, color: C.goldL, padding: "3px 10px",
+              borderRadius: 5, fontSize: 11, fontWeight: 500, fontFamily: font.body,
+            }}>{t}</span>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setOpen(!open)}
+          style={{
+            background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8,
+            padding: "8px 16px", color: C.gold, fontSize: 12, fontWeight: 600,
+            cursor: "pointer", fontFamily: font.body, transition: "all 0.3s",
+            width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}
+        >
+          <span>{open ? "Gizle" : "Nasıl Yapılır + PI"}</span>
+          <span style={{ transform: open ? "rotate(180deg)" : "none", transition: "0.3s" }}>▼</span>
+        </button>
+      </div>
+
+      {open && (
+        <div style={{
+          background: C.bg2, borderTop: `1px solid ${C.border}`,
+          padding: "18px 22px", animation: "fadeUp 0.3s ease",
+        }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontFamily: font.body, fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "1px", marginBottom: 6, textTransform: "uppercase" }}>Uygulama</div>
+            <p style={{ fontFamily: font.body, fontSize: 13, color: C.soft, lineHeight: 1.6 }}>{ex.how}</p>
+          </div>
+          <div>
+            <div style={{ fontFamily: font.body, fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: "1px", marginBottom: 6, textTransform: "uppercase" }}>PI Takibi</div>
+            <p style={{ fontFamily: font.body, fontSize: 13, color: C.soft, lineHeight: 1.6 }}>{ex.pi}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   MAIN APP
+   ═══════════════════════════════════════ */
+export default function Alfamentor() {
+  const [scrolled, setScrolled] = useState(false);
+  const [activeCat, setActiveCat] = useState("Tümü");
+
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", h);
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+
+  const cats = ["Tümü", "Uzunluk", "Kalınlık", "Kalınlık & Uzunluk", "Performans"];
+  const filteredEx = activeCat === "Tümü" ? exercises : exercises.filter(e => e.cat === activeCat);
+
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: font.body }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+        @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+        @keyframes glow{0%,100%{box-shadow:0 0 20px ${C.gold}10}50%{box-shadow:0 0 40px ${C.gold}20}}
+        ::selection{background:${C.gold}30;color:${C.gold}}
+        ::-webkit-scrollbar{width:5px}
+        ::-webkit-scrollbar-track{background:${C.bg}}
+        ::-webkit-scrollbar-thumb{background:${C.gold}25;border-radius:3px}
+        body{background:${C.bg}}
+        a{text-decoration:none}
+      `}</style>
+
+      {/* ═══ NAV ═══ */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        padding: scrolled ? "10px 0" : "18px 0",
+        background: scrolled ? C.bg + "E5" : "transparent",
+        backdropFilter: scrolled ? "blur(24px)" : "none",
+        borderBottom: scrolled ? `1px solid ${C.border}` : "1px solid transparent",
+        transition: "all 0.4s ease",
+      }}>
+        <div style={{ maxWidth: 1160, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 34, height: 34,
+              background: `linear-gradient(135deg, ${C.gold}, ${C.goldD})`,
+              borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+              fontWeight: 700, fontSize: 18, color: C.bg, fontFamily: font.display,
+            }}>α</div>
+            <span style={{
+              fontFamily: font.display, fontWeight: 700, fontSize: 18, letterSpacing: "2.5px",
+              background: `linear-gradient(135deg, ${C.gold}, ${C.goldL})`,
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}>ALFAMENTOR</span>
+          </div>
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            {navLinks.map(l => (
+              <a key={l} href={`#${l.toLowerCase().replace(/\s/g, "-")}`} style={{
+                color: C.soft, fontSize: 13, fontWeight: 500, transition: "color 0.3s", cursor: "pointer",
+              }}
+                onMouseEnter={e => e.target.style.color = C.gold}
+                onMouseLeave={e => e.target.style.color = C.soft}
+              >{l}</a>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* ═══ HERO ═══ */}
+      <section style={{
+        position: "relative", minHeight: "100vh",
+        display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `
+            radial-gradient(ellipse 50% 40% at 50% 0%, ${C.gold}06 0%, transparent 60%),
+            radial-gradient(circle at 20% 80%, ${C.red}04 0%, transparent 40%),
+            radial-gradient(circle at 80% 60%, ${C.blue}03 0%, transparent 40%)
+          `,
+        }} />
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.03,
+          backgroundImage: `linear-gradient(${C.soft} 1px, transparent 1px), linear-gradient(90deg, ${C.soft} 1px, transparent 1px)`,
+          backgroundSize: "50px 50px",
+        }} />
+
+        <div style={{ position: "relative", textAlign: "center", maxWidth: 780, padding: "0 24px" }}>
+          {/* Badge */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: C.goldGlow, border: `1px solid ${C.gold}20`,
+            borderRadius: 999, padding: "5px 16px", marginBottom: 28,
+            animation: "fadeUp 0.6s ease 0.1s both",
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 2s ease infinite" }} />
+            <span style={{ color: C.gold, fontSize: 11, fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+              Hink Trial Verileriyle Destekleniyor
+            </span>
+          </div>
+
+          <h1 style={{
+            fontFamily: font.display, fontSize: "clamp(34px, 6vw, 68px)",
+            fontWeight: 700, lineHeight: 1.1, marginBottom: 22,
+            animation: "fadeUp 0.7s ease 0.2s both",
+          }}>
+            <span style={{ color: C.text }}>Bilimsel Temelli</span><br />
+            <span style={{
+              background: `linear-gradient(135deg, ${C.gold}, ${C.goldL}, ${C.gold})`,
+              backgroundSize: "200% auto", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              animation: "shimmer 5s linear infinite",
+            }}>Erkek Geliştirme Rehberi</span>
+          </h1>
+
+          <p style={{
+            color: C.soft, fontSize: "clamp(14px, 1.8vw, 17px)", lineHeight: 1.7,
+            maxWidth: 540, margin: "0 auto 36px", animation: "fadeUp 0.7s ease 0.4s both",
+          }}>
+            Egzersiz teknikleri, cihaz rehberleri ve PI takibi — <strong style={{ color: C.text }}>Hink Trial sonuçlarıyla</strong> desteklenen,
+            Türkçe'nin ilk kapsamlı PE kaynağı.
+          </p>
+
+          <div style={{
+            display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap",
+            animation: "fadeUp 0.7s ease 0.6s both",
+          }}>
+            <a href="#egzersizler" style={{
+              background: `linear-gradient(135deg, ${C.gold}, ${C.goldD})`,
+              color: C.bg, border: "none", padding: "13px 32px", borderRadius: 10,
+              fontSize: 14, fontWeight: 700, cursor: "pointer", display: "inline-block",
+              transition: "transform 0.3s, box-shadow 0.3s",
+            }}>Egzersiz Rehberi →</a>
+            <a href="#hink-trial" style={{
+              background: "transparent", color: C.text,
+              border: `1px solid ${C.border}`, padding: "13px 32px", borderRadius: 10,
+              fontSize: 14, fontWeight: 500, cursor: "pointer", display: "inline-block",
+            }}>Hink Trial Verileri</a>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ HINK TRIAL STATS ═══ */}
+      <section id="hink-trial" style={{ padding: "80px 24px" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+          <SectionLabel text="Bilimsel Veri" />
+          <SectionTitle>Hink Trial Sonuçları (2025)</SectionTitle>
+          <p style={{ textAlign: "center", color: C.soft, fontSize: 14, maxWidth: 560, margin: "12px auto 40px", lineHeight: 1.7 }}>
+            33 katılımcı · 6 ay · Standardize fotoğrafik doğrulama · Non-invaziv yöntemler
+          </p>
+
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16,
+          }}>
+            {trialStats.map((s, i) => (
+              <div key={i} style={{
+                background: C.card, border: `1px solid ${C.border}`, borderRadius: 14,
+                padding: "28px 24px", textAlign: "center",
+                animation: `fadeUp 0.5s ease ${i * 0.1}s both`,
+              }}>
+                <div style={{ fontSize: 32, marginBottom: 4 }}>
+                  <AnimatedNumber end={s.value} decimals={s.value.includes(".") ? 2 : 0} prefix={s.value.startsWith("+") ? "+" : ""} suffix={""} color={s.color} />
+                  <span style={{ fontSize: 16, color: s.color, fontFamily: font.mono }}> {s.unit}</span>
+                </div>
+                <div style={{ fontSize: 11, color: C.dim, fontFamily: font.mono, marginBottom: 6 }}>{s.sub}</div>
+                <div style={{ fontSize: 13, color: C.soft, fontWeight: 500 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Methodology mini */}
+          <div style={{
+            marginTop: 32, background: C.surface, border: `1px solid ${C.border}`,
+            borderRadius: 14, padding: "24px 28px",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20,
+          }}>
+            {[
+              { icon: "📐", title: "Standardize Ölçüm", desc: "BPEL, NBPEL, MSEG, BPFL — egzersizden min. 2 saat sonra" },
+              { icon: "📸", title: "Fotoğrafik Doğrulama", desc: "Her ölçüm fotoğrafla dokümente edildi — PE tarihinde bir ilk" },
+              { icon: "🔬", title: "Kontrollü Protokol", desc: "Hink kursuna dayalı rutin, citrulline takviyesi, haftalık check-in" },
+            ].map((m, i) => (
+              <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <span style={{ fontSize: 22 }}>{m.icon}</span>
+                <div>
+                  <div style={{ fontFamily: font.display, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>{m.title}</div>
+                  <div style={{ fontSize: 12, color: C.soft, lineHeight: 1.6 }}>{m.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ EXERCISES ═══ */}
+      <section id="egzersizler" style={{
+        padding: "80px 24px", background: C.bg2,
+        borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <SectionLabel text="Teknikler & Rehber" />
+          <SectionTitle>Egzersiz Kütüphanesi</SectionTitle>
+          <p style={{ textAlign: "center", color: C.soft, fontSize: 14, maxWidth: 500, margin: "12px auto 36px", lineHeight: 1.7 }}>
+            Her teknik, uygulama detayları ve PI (Fizyolojik İndikatör) takip rehberiyle birlikte.
+          </p>
+
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 32, flexWrap: "wrap" }}>
+            {cats.map(c => (
+              <button key={c} onClick={() => setActiveCat(c)} style={{
+                background: activeCat === c ? C.goldGlow : "transparent",
+                color: activeCat === c ? C.gold : C.soft,
+                border: `1px solid ${activeCat === c ? C.gold + "35" : C.border}`,
+                padding: "7px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+                cursor: "pointer", transition: "all 0.3s",
+              }}>{c}</button>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 16 }}>
+            {filteredEx.map((ex, i) => <ExerciseCard key={ex.name} ex={ex} index={i} />)}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ PROGRAMS ═══ */}
+      <section id="programlar" style={{ padding: "80px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <SectionLabel text="Adım Adım" />
+          <SectionTitle>Antrenman Programları</SectionTitle>
+          <p style={{ textAlign: "center", color: C.soft, fontSize: 14, maxWidth: 500, margin: "12px auto 40px", lineHeight: 1.7 }}>
+            Hink protokolüne dayalı, seviyeye göre ayrılmış programlar.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
+            {programs.map((p, i) => (
+              <div key={i} style={{
+                background: C.card, border: `1px solid ${C.border}`, borderRadius: 14,
+                overflow: "hidden", animation: `fadeUp 0.5s ease ${i * 0.1}s both`,
+              }}>
+                <div style={{
+                  padding: "3px 0", background: `linear-gradient(90deg, transparent, ${p.color}30, transparent)`,
+                }} />
+                <div style={{ padding: "24px 22px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <h3 style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: C.text }}>{p.title}</h3>
+                  </div>
+                  <p style={{ fontSize: 13, color: C.soft, marginBottom: 18 }}>{p.subtitle}</p>
+
+                  <div style={{ display: "flex", gap: 12, marginBottom: 18 }}>
+                    {[
+                      { label: p.weeks, icon: "📅" },
+                      { label: p.daily, icon: "⏱" },
+                      { label: p.days, icon: "🔁" },
+                    ].map((m, j) => (
+                      <span key={j} style={{
+                        background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8,
+                        padding: "6px 10px", fontSize: 11, color: C.soft, fontFamily: font.mono,
+                      }}>{m.icon} {m.label}</span>
+                    ))}
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+                    {p.steps.map((s, j) => (
+                      <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <span style={{
+                          minWidth: 20, height: 20, borderRadius: 6,
+                          background: p.color + "15", color: p.color,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 10, fontWeight: 700, fontFamily: font.mono,
+                        }}>{j + 1}</span>
+                        <span style={{ fontSize: 13, color: C.soft, lineHeight: 1.5 }}>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{
+                    background: C.amberBg, border: `1px solid ${C.amber}20`, borderRadius: 8,
+                    padding: "10px 14px", display: "flex", gap: 8, alignItems: "flex-start",
+                  }}>
+                    <span style={{ fontSize: 14 }}>⚠️</span>
+                    <span style={{ fontSize: 12, color: C.amber, lineHeight: 1.5 }}>{p.warn}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ PRODUCTS ═══ */}
+      <section id="ürünler" style={{
+        padding: "80px 24px", background: C.bg2,
+        borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <SectionLabel text="Önerilen Ekipman" />
+          <SectionTitle>Ürün Rehberi</SectionTitle>
+          <p style={{ textAlign: "center", color: C.soft, fontSize: 14, maxWidth: 500, margin: "12px auto 40px", lineHeight: 1.7 }}>
+            Bağımsız değerlendirme — marka sponsorluğu almıyoruz.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+            {products.map((p, i) => (
+              <div key={i} style={{
+                background: C.card, border: `1px solid ${C.border}`, borderRadius: 14,
+                padding: "24px 22px", animation: `fadeUp 0.5s ease ${i * 0.08}s both`,
+                display: "flex", flexDirection: "column",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+                  <span style={{ fontSize: 36 }}>{p.icon}</span>
+                  <span style={{
+                    background: C.goldGlow, color: C.gold, border: `1px solid ${C.gold}25`,
+                    padding: "3px 10px", borderRadius: 6, fontSize: 10, fontWeight: 600,
+                    height: "fit-content", letterSpacing: "0.5px",
+                  }}>{p.tag}</span>
+                </div>
+                <h4 style={{ fontFamily: font.display, fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 4 }}>{p.name}</h4>
+                <div style={{ fontSize: 12, color: C.dim, marginBottom: 12 }}>{p.type}</div>
+                <p style={{ fontSize: 13, color: C.soft, lineHeight: 1.6, marginBottom: 14, flex: 1 }}>{p.why}</p>
+                <div style={{ fontSize: 12, color: C.soft, marginBottom: 12 }}>
+                  <strong style={{ color: C.text }}>İdeal:</strong> {p.best}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ color: C.gold, fontSize: 14 }}>★</span>
+                    <span style={{ fontFamily: font.mono, fontSize: 13, fontWeight: 700, color: C.gold }}>{p.rating}</span>
+                  </div>
+                  <span style={{ fontFamily: font.mono, fontSize: 13, color: C.soft }}>{p.price}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ BLOG ═══ */}
+      <section id="blog" style={{ padding: "80px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <SectionLabel text="Bilgi Bankası" />
+          <SectionTitle>Son Yazılar</SectionTitle>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginTop: 40 }}>
+            {blogPosts.map((b, i) => (
+              <div key={i} style={{
+                background: C.card, border: `1px solid ${C.border}`, borderRadius: 14,
+                padding: "22px 20px", cursor: "pointer", transition: "border-color 0.3s",
+                animation: `fadeUp 0.5s ease ${i * 0.08}s both`,
+              }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = C.gold + "30"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <span style={{ color: C.gold, fontSize: 11, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase" }}>{b.cat}</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {b.hot && <span style={{
+                      background: C.redBg, color: "#F87171", fontSize: 10, padding: "2px 8px",
+                      borderRadius: 999, fontWeight: 700, fontFamily: font.mono,
+                    }}>YENİ</span>}
+                    <span style={{ color: C.dim, fontSize: 11 }}>{b.time}</span>
+                  </div>
+                </div>
+                <h3 style={{ fontFamily: font.display, fontSize: 17, fontWeight: 700, lineHeight: 1.35, marginBottom: 8, color: C.text }}>{b.title}</h3>
+                <p style={{ fontSize: 13, color: C.soft, lineHeight: 1.6 }}>{b.excerpt}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SAFETY BANNER ═══ */}
+      <section style={{ padding: "0 24px 60px" }}>
+        <div style={{
+          maxWidth: 800, margin: "0 auto",
+          background: `linear-gradient(135deg, ${C.red}08, ${C.amber}06)`,
+          border: `1px solid ${C.red}20`, borderRadius: 16, padding: "32px 28px",
+        }}>
+          <h3 style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, marginBottom: 12, color: C.text, textAlign: "center" }}>
+            ⚠️ Güvenlik Her Şeyden Önce
+          </h3>
+          <p style={{ fontSize: 13, color: C.soft, lineHeight: 1.8, textAlign: "center", maxWidth: 600, margin: "0 auto" }}>
+            PE egzersizleri yanlış uygulandığında ciddi yaralanmalara neden olabilir.
+            <strong style={{ color: C.text }}> PI (Fizyolojik İndikatörler) takibi zorunludur.</strong> Ağrı, uyuşma, renk değişikliği veya ereksiyon kalitesinde düşüş durumunda derhal durdurun.
+            Bu site eğitim amaçlıdır ve tıbbi tavsiye yerine geçmez.
+          </p>
+        </div>
+      </section>
+
+      {/* ═══ NEWSLETTER ═══ */}
+      <section style={{ padding: "0 24px 80px" }}>
+        <div style={{
+          maxWidth: 640, margin: "0 auto",
+          background: C.goldGlow, border: `1px solid ${C.gold}18`, borderRadius: 18,
+          padding: "40px 32px", textAlign: "center",
+        }}>
+          <h3 style={{ fontFamily: font.display, fontSize: 26, fontWeight: 700, marginBottom: 10 }}>Haftalık Bülten</h3>
+          <p style={{ fontSize: 13, color: C.soft, lineHeight: 1.7, marginBottom: 24, maxWidth: 420, margin: "0 auto 24px" }}>
+            Yeni rehberler, trial güncellemeleri ve PE ipuçları — haftada bir, doğrudan mail kutunuza.
+          </p>
+          <div style={{ display: "flex", gap: 10, maxWidth: 400, margin: "0 auto", flexWrap: "wrap", justifyContent: "center" }}>
+            <input type="email" placeholder="E-posta adresiniz" style={{
+              flex: 1, minWidth: 200, background: C.bg, border: `1px solid ${C.border}`,
+              borderRadius: 10, padding: "11px 16px", color: C.text, fontSize: 13, outline: "none",
+            }} />
+            <button style={{
+              background: `linear-gradient(135deg, ${C.gold}, ${C.goldD})`,
+              color: C.bg, border: "none", padding: "11px 24px", borderRadius: 10,
+              fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+            }}>Abone Ol</button>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ FOOTER ═══ */}
+      <footer style={{ borderTop: `1px solid ${C.border}`, padding: "48px 24px 28px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 36, marginBottom: 36 }}>
+            <div style={{ maxWidth: 280 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <div style={{
+                  width: 30, height: 30, background: `linear-gradient(135deg, ${C.gold}, ${C.goldD})`,
+                  borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
+                  fontWeight: 700, fontSize: 15, color: C.bg, fontFamily: font.display,
+                }}>α</div>
+                <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, letterSpacing: "2px", color: C.gold }}>ALFAMENTOR</span>
+              </div>
+              <p style={{ fontSize: 12, color: C.soft, lineHeight: 1.7 }}>
+                Bilimsel temelli erkek geliştirme rehberi. Hink Trial verileriyle desteklenen, Türkçe'nin ilk kapsamlı PE kaynağı.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
+              {[
+                { title: "Rehber", links: ["Egzersizler", "Programlar", "Ölçüm", "PI Takibi"] },
+                { title: "Ürünler", links: ["Pompalar", "Extender'lar", "Supplementler"] },
+                { title: "Hakkımızda", links: ["Metodoloji", "Hink Trial", "İletişim"] },
+              ].map(col => (
+                <div key={col.title}>
+                  <h4 style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 14, letterSpacing: "0.5px" }}>{col.title}</h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                    {col.links.map(l => (
+                      <a key={l} href="#" style={{ color: C.soft, fontSize: 12, transition: "color 0.3s" }}
+                        onMouseEnter={e => e.target.style.color = C.gold}
+                        onMouseLeave={e => e.target.style.color = C.soft}
+                      >{l}</a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{
+            background: C.surface, borderRadius: 10, padding: "14px 18px", marginBottom: 28,
+          }}>
+            <p style={{ fontSize: 11, color: C.dim, lineHeight: 1.7 }}>
+              ⚕️ <strong style={{ color: C.soft }}>Sorumluluk Reddi:</strong> Bu sitedeki bilgiler eğitim amaçlıdır ve tıbbi tavsiye yerine geçmez. PE egzersizleri risk taşır.
+              Herhangi bir program başlatmadan önce riskleri değerlendirin. Affiliate linkler içerebilir.
+              Hink Trial verileri peakmalephysique.com'dan alıntılanmıştır.
+            </p>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <p style={{ color: C.dim, fontSize: 11 }}>© 2026 Alfamentor. Tüm hakları saklıdır.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
